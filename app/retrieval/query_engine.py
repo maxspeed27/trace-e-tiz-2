@@ -237,33 +237,26 @@ Position: {hit.payload.get('doc_position', 'Unknown')} of {hit.payload.get('tota
 Parent Document: {hit.payload.get('parent_document_id', 'None')}
 """)
 
-            # Update the prompt format to better handle multi-document analysis
-            prompt = f"""Answer the following question using information from {len(document_ids)} selected documents: {query}
+            # Construct the dynamic parts separately
+            available_documents = '\n'.join(f"- {hit.payload.get('name', 'Unnamed')}" for hit in search_result[:1] if hit.payload.get('document_id') in document_ids)
+            document_hierarchy = '\n'.join(set(hierarchy_info))
+            context_from_documents = '\n'.join(context_chunks)
 
-Available Documents:
-{'\n'.join(f"- {hit.payload.get('name', 'Unnamed')}" for hit in search_result[:1] if hit.payload.get('document_id') in document_ids)}
-
-Document Hierarchy Information:
-{'\n'.join(set(hierarchy_info))}
-
-Context from Documents:
-{'\n'.join(context_chunks)}
-
-IMPORTANT INSTRUCTIONS:
-1. Your task is to analyze ALL provided documents equally.
-2. For each quote, specify which document it comes from using the format: In [Document Name], [[exact quote]].
-3. If multiple documents discuss the same topic, you MUST compare and contrast their content.
-4. If you can only find relevant information in one document, explicitly state that other documents don't contain relevant information.
-5. Keep quotes concise and specific.
-6. ALWAYS start your response with: "I'm Saul Goodman, your personal AI legal assistant."
-7. ALWAYS end your response with a relevant catchphrase like "Better Call Saul!" or "Did you know you have rights? The constitution says you do!"
-
-Example response format:
-I'm Saul Goodman, your personal AI legal assistant.
-
-In Agreement A, [[specific quote about topic]] while in Agreement B, [[related quote showing difference]]. However, Agreement C [[quote showing another perspective]].
-
-Better Call Saul!"""
+            # Construct the prompt without using f-strings for the static parts
+            prompt = (
+                f"Answer the following question using information from {len(document_ids)} selected documents: {query}\n\n"
+                f"Available Documents:\n{available_documents}\n\n"
+                f"Document Hierarchy Information:\n{document_hierarchy}\n\n"
+                f"Context from Documents:\n{context_from_documents}\n\n"
+                "IMPORTANT INSTRUCTIONS:\n"
+                "1. Your task is to analyze ALL provided documents equally.\n"
+                "2. For each quote, specify which document it comes from using the format: In [Document Name], [[exact quote]].\n"
+                "3. If multiple documents discuss the same topic, you MUST compare and contrast their content.\n"
+                "4. If you can only find relevant information in one document, explicitly state that other documents do not contain relevant information.\n"
+                "5. Keep quotes concise and specific.\n"
+                "6. ALWAYS start your response with: 'I am Saul Goodman, your personal AI legal assistant.'\n"
+                "7. ALWAYS end your response with a catchphrase like 'Better Call Saul' or 'Did you know you have rights? The constitution says you do!'"
+            )
 
             # Update system prompt to enforce multi-document analysis and persona
             messages=[
@@ -281,7 +274,7 @@ Key requirements:
 
             # Adjust temperature to encourage more comprehensive responses
             response = await self.openai_client.chat.completions.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4o",
                 messages=messages,
                 temperature=0.1,  # Slightly increased from 0.0 to encourage more comprehensive responses
                 max_tokens=1500  # Increased to allow for longer, more detailed responses
@@ -351,12 +344,7 @@ Key requirements:
                 raise HTTPException(status_code=500, detail=f"Query engine error: {error_str}") 
 
             # Add debug logging
-            logger.debug(f"Search results by document: {[
-                {
-                    'document_id': hit.payload.get('document_id'),
-                    'score': hit.score
-                } for hit in search_result
-            ]}") 
+            logger.debug(f"Search results by document: {[hit.payload.get('document_id') for hit in search_result]}")
 
             # Add more logging to help debug
             logger.debug(f"Reranked results: {len(reranked.results)}")

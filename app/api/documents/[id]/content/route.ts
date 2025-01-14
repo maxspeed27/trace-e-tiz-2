@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 
 async function fetchPDFFile(documentId: string): Promise<Response> {
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
-  console.log(`Fetching from backend: ${backendUrl}/api/documents/${documentId}/content`);
+  console.log(`Fetching from backend: ${backendUrl}/documents/${documentId}/content`);
   
-  const response = await fetch(`${backendUrl}/api/documents/${documentId}/content`, {
+  const response = await fetch(`${backendUrl}/documents/${documentId}/content`, {
     headers: {
       'Accept': 'application/pdf',
       'Cache-Control': 'no-cache',

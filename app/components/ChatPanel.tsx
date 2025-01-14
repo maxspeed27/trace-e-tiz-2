@@ -39,9 +39,7 @@ export default function ChatPanel({ selectedDocuments, onCitationClick }: ChatPa
       try {
         if (typeof window !== 'undefined') {
           const pdfjs = await import('pdfjs-dist');
-          if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-            pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
-          }
+          pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
         }
       } catch (error) {
         console.error('Failed to initialize PDF worker:', error);

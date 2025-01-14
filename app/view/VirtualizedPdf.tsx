@@ -1,4 +1,5 @@
 import { Document, Page, pdfjs } from 'react-pdf';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { useState, forwardRef, useRef, useMemo, useEffect, useCallback, useImperativeHandle } from 'react';
@@ -8,8 +9,8 @@ import { DocumentColorEnum } from '../constants/colors';
 import { multiHighlight } from '../utils/multi-line-highlight';
 
 // Initialize pdfjs worker with local file
-if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 }
 
 export interface PdfFocusHandler {
