@@ -56,6 +56,9 @@ public/pdfjs/pdf.worker.min.js
 # PDF
 uploads/
 
+# Qdrant storage
+qdrant_storage/
+
 # Additional files to ignore
 # Test outputs
 test-results/
