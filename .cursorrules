@@ -1,0 +1,82 @@
+{
+    "name": "Next.js + Python FastAPI Cursorrules",
+    "description": "Guidelines to refine the Next.js (TypeScript) frontend & Python FastAPI backend for PDF Q&A with Qdrant.",
+    "rules": {
+      "projectObjective": {
+        "summary": "Offer a robust multi-document PDF chat interface (Next.js + Tailwind + minimal client usage) that ingests/indexes PDFs in Python FastAPI, storing chunks in Qdrant, retrieving relevant text for Q&A with embeddings."
+      },
+  
+      "nextjsGuidelines": {
+        "objective": "Keep the UI clean, accessible, and SSR-friendly. Limit 'use client'. Ensure clickable citations and correct highlights in the PDF viewer.",
+        "rules": [
+          {
+            "id": "NJS-1",
+            "title": "Structure & Minimal Client",
+            "description": "Put route handlers in app/api for server-based logic. Only use 'use client' in small UI components (PDFViewer, ChatPanel, etc.). SSR or RSC for bigger flows."
+          },
+          {
+            "id": "NJS-2",
+            "title": "Tailwind & Accessibility",
+            "description": "Use Tailwind for layout; maintain color-coded highlights from DocumentColorEnum. Add ARIA attributes and keyboard-accessible interactions for citations and nav."
+          },
+          {
+            "id": "NJS-3",
+            "title": "Error Boundaries & Logging",
+            "description": "Use PDFErrorBoundary for PDF loading errors. Provide fallback messages if back-end calls fail. Minimal logs in production."
+          }
+        ]
+      },
+  
+      "pythonGuidelines": {
+        "objective": "Maintain clean PDF ingestion, chunking, Qdrant indexing, and a stable Q&A route that returns JSON with text + citations. Use cohere or openai embeddings.",
+        "rules": [
+          {
+            "id": "PY-1",
+            "title": "Ingestion & Chunking",
+            "description": "In /api/upload, handle PDF/docx, extract text with fitz/docx, chunk them, store in Qdrant with docType, level, pageNumber. Log missing pages or invalid files."
+          },
+          {
+            "id": "PY-2",
+            "title": "Query Engine & Rerank",
+            "description": "Use your QueryEngine for embeddings + Qdrant search. Optionally rerank top contexts. Return { answer, citations[] } including { document_id, snippet, page_number }."
+          },
+          {
+            "id": "PY-3",
+            "title": "Error Handling & Logging",
+            "description": "Return structured JSON errors (status + detail). Partial failures (one doc fails) shouldn’t crash ingestion. Keep debug logs short in production."
+          }
+        ]
+      },
+  
+      "sharedFullStack": {
+        "objective": "Ensure consistent JSON shapes for PDF and Q&A responses, plus consistent logging across front and back.",
+        "rules": [
+          {
+            "id": "FS-1",
+            "title": "Consistent JSON Contracts",
+            "description": "Use { id, name, url } for documents, { answer, citations[], confidence } for Q&A. Citations: { document_id, snippet, page_number } to reduce confusion."
+          },
+          {
+            "id": "FS-2",
+            "title": "Security & Validation",
+            "description": "Validate filenames on upload, guard empty PDFs. If needed, add auth tokens. Sanitize text layers from malicious PDFs."
+          },
+          {
+            "id": "FS-3",
+            "title": "User Feedback & Logging",
+            "description": "Show clear success/failure on upload. Log partial successes if one file fails. Highlight coverage or snippet mismatch on Q&A."
+          }
+        ]
+      },
+  
+      "extraSections": {
+        "docs": "You can add docs/ with instructions to run Next.js, FastAPI, environment variables, Qdrant setup, etc.",
+        "testing": "Basic tests for chunking logic in Python, React tests for citation clicks. (Optional future improvements.)"
+      },
+  
+      "enforcement": {
+        "warning": "Don’t overuse 'use client'; keep SSR stable. Handle large chunks gracefully or skip them if needed."
+      }
+    }
+  }
+  

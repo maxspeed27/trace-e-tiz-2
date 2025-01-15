@@ -145,7 +145,7 @@ Parent Document: {meta['parent_id']}\n\n"""
             reranked = self.cohere_client.rerank(
                 query=query,
                 documents=contexts,
-                model="rerank-multilingual-v2.0",
+                model="rerank-v3.5",
                 top_n=30
             )
 

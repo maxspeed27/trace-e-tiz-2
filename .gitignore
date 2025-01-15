@@ -46,6 +46,8 @@ Thumbs.db
 # Node
 node_modules/
 .next/ 
+package-lock.json
+package-lock.json/
 
 # PDF worker files
 public/pdf.worker.js
@@ -58,6 +60,11 @@ uploads/
 
 # Qdrant storage
 qdrant_storage/
+
+# Codefetch
+codefetch/ 
+codefetchignore.txt/
+.codefetchignore/
 
 # Additional files to ignore
 # Test outputs
@@ -81,3 +88,10 @@ coverage/
 *.sublime-workspace
 *.sublime-project
 *.code-workspace
+
+# New files to ignore
+codebase_structure.txt
+repomix-output.txt
+screenRecording1.md
+screenRecording2Logs.md
+Z-ThoughtsAndDocs/
