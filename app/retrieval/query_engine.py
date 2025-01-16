@@ -3,6 +3,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from openai import AsyncOpenAI, OpenAIError
 import cohere
+import voyageai
 from typing import Optional
 import os
 from fastapi import HTTPException
@@ -29,6 +30,7 @@ class QueryEngine:
             timeout=60  # Increased timeout for cloud operations
         )
         self.cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
+        self.voyage_client = voyageai.Client(os.getenv("VOYAGE_API_KEY"))
         self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.collection_name = "documents"
         
@@ -93,12 +95,12 @@ Parent Document: {meta['parent_id']}\n\n"""
                     }
 
             # Continue with regular semantic search for other queries...
-            # 1. Get embeddings first
-            query_embedding = self.cohere_client.embed(
+            # 1. Get embeddings using Voyage instead of Cohere
+            query_embedding = self.voyage_client.embed(
                 texts=[query],
-                model="embed-multilingual-v3.0",
-                input_type="search_query",
-                truncate="END"
+                model="voyage-law-2",
+                input_type="query",
+                truncation=True
             ).embeddings[0]
 
             # 3. Do the vector search

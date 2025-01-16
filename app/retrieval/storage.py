@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient, models
 import logging
 import cohere
+import voyageai
 import os
 from ..models.document import TextChunk
 
@@ -11,6 +12,7 @@ class VectorStorage:
     def __init__(self):
         self.collection_name = "documents"
         self.cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
+        self.voyage_client = voyageai.Client(os.getenv("VOYAGE_API_KEY"))
         
         # Initialize Qdrant client with cloud configuration
         self.qdrant_client = QdrantClient(
@@ -32,7 +34,7 @@ class VectorStorage:
                 self.qdrant_client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=models.VectorParams(
-                        size=1024,  # Cohere embed v3 dimension
+                        size=1024,  # Voyage law-2 dimension
                         distance=models.Distance.COSINE
                     )
                 )
@@ -58,10 +60,10 @@ class VectorStorage:
         try:
             # Batch texts for embedding
             texts = [chunk.text for chunk in chunks]
-            embeddings = self.cohere_client.embed(
+            embeddings = self.voyage_client.embed(
                 texts=texts,
-                model="embed-multilingual-v3.0",
-                input_type="search_document"
+                model="voyage-law-2",
+                input_type="document"
             ).embeddings
 
             # Prepare points for Qdrant
@@ -139,8 +141,12 @@ class VectorStorage:
 
     async def search(self, query: str, filter_conditions: Dict = None, limit: int = 5) -> List[Any]:
         try:
-            # Convert query to embedding
-            query_embedding = await self._get_embedding(query)
+            # Convert query to embedding using Voyage
+            query_embedding = self.voyage_client.embed(
+                texts=[query],
+                model="voyage-law-2",
+                input_type="query"
+            ).embeddings[0]
             
             # Prepare search conditions
             search_params = models.SearchParams(

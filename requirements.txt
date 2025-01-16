@@ -10,6 +10,7 @@ qdrant-client
 cohere
 openai
 tokenizers
+voyageai
 
 # Backend
 fastapi

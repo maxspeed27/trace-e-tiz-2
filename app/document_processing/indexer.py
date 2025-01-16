@@ -8,6 +8,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue, PointStruct
 import cohere
+import voyageai
 import uuid
 import fitz
 
@@ -24,6 +25,7 @@ class DocumentIndexer:
             timeout=60  # Increased timeout for cloud operations
         )
         self.cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
+        self.voyage_client = voyageai.Client(os.getenv("VOYAGE_API_KEY"))
         
         # Fix: Create collection more robustly
         try:
@@ -37,7 +39,7 @@ class DocumentIndexer:
                 self.qdrant_client.create_collection(
                     collection_name="documents",
                     vectors_config=models.VectorParams(
-                        size=1024,
+                        size=1024,  # Voyage law-2 dimension
                         distance=models.Distance.COSINE
                     )
                 )
@@ -228,17 +230,17 @@ class DocumentIndexer:
             raise
 
     async def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Get embeddings for a list of texts using Cohere"""
+        """Get embeddings for a list of texts using Voyage"""
         try:
-            response = self.cohere_client.embed(
+            response = self.voyage_client.embed(
                 texts=texts,
-                model="embed-english-v3.0",
-                input_type="search_document"
+                model="voyage-law-2",
+                input_type="document"
             )
             return response.embeddings
         except Exception as e:
             logger.error(f"Error getting embeddings: {str(e)}")
-            raise 
+            raise
 
     async def delete_document(self, document_id: str, contract_set_id: str):
         """Delete all chunks for a specific document"""
