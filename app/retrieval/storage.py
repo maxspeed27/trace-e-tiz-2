@@ -12,11 +12,11 @@ class VectorStorage:
         self.collection_name = "documents"
         self.cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
         
-        # Initialize Qdrant client with retry logic
+        # Initialize Qdrant client with cloud configuration
         self.qdrant_client = QdrantClient(
-            host="localhost",
-            port=6333,
-            timeout=60  # Increase timeout for large operations
+            url=os.getenv("QDRANT_CLOUD_URL"),
+            api_key=os.getenv("QDRANT_API_KEY"),
+            timeout=60  # Increased timeout for cloud operations
         )
         
         # Ensure collection exists

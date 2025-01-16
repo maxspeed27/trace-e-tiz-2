@@ -18,7 +18,11 @@ class DocumentIndexer:
         self.processor = DocumentProcessor()
         self.upload_dir = Path(os.getenv('UPLOAD_DIR', 'uploads'))
         self.upload_dir.mkdir(exist_ok=True)
-        self.qdrant_client = QdrantClient("http://localhost:6333")
+        self.qdrant_client = QdrantClient(
+            url=os.getenv("QDRANT_CLOUD_URL"),
+            api_key=os.getenv("QDRANT_API_KEY"),
+            timeout=60  # Increased timeout for cloud operations
+        )
         self.cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
         
         # Fix: Create collection more robustly

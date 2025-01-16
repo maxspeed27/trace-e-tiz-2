@@ -36,19 +36,24 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(root_path="/api")
-app.qdrant_client = QdrantClient("http://localhost:6333")
+app.qdrant_client = QdrantClient(
+    url=os.getenv("QDRANT_CLOUD_URL"),
+    api_key=os.getenv("QDRANT_API_KEY"),
+    timeout=60  # Increased timeout for cloud operations
+)
 processor = DocumentProcessor()
 indexer = DocumentIndexer()
 logger = logging.getLogger(__name__)
 query_engine = QueryEngine()  # Single source of truth
 
-# Add CORS middleware
+# Add CORS middleware with updated settings for cloud
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  # Frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]  # Added for cloud compatibility
 )
 
 class QueryRequest(BaseModel):

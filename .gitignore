@@ -95,3 +95,11 @@ repomix-output.txt
 screenRecording1.md
 screenRecording2Logs.md
 Z-ThoughtsAndDocs/
+backend.txt
+frontend.txt
+.cursorrules
+
+# Prompts and code
+prompts/
+prompts_code/
+z-code-terminal-outputs/

@@ -24,8 +24,9 @@ class Citation(NamedTuple):
 class QueryEngine:
     def __init__(self, qdrant_client: Optional[QdrantClient] = None):
         self.qdrant_client = qdrant_client or QdrantClient(
-            host=os.getenv("QDRANT_HOST", "localhost"),
-            port=int(os.getenv("QDRANT_PORT", 6333))
+            url=os.getenv("QDRANT_CLOUD_URL"),
+            api_key=os.getenv("QDRANT_API_KEY"),
+            timeout=60  # Increased timeout for cloud operations
         )
         self.cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
         self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
