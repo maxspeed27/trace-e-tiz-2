@@ -250,28 +250,43 @@ Parent Document: {hit.payload.get('parent_document_id', 'None')}
                 f"Answer the following question using information from {len(document_ids)} selected documents: {query}\n\n"
                 f"Available Documents:\n{available_documents}\n\n"
                 f"Document Hierarchy Information:\n{document_hierarchy}\n\n"
-                f"Context from Documents:\n{context_from_documents}\n\n"
-                "IMPORTANT INSTRUCTIONS:\n"
-                "1. Your task is to analyze ALL provided documents equally.\n"
-                "2. For each quote, specify which document it comes from using the format: In [Document Name], [[exact quote]].\n"
-                "3. If multiple documents discuss the same topic, you MUST compare and contrast their content.\n"
-                "4. If you can only find relevant information in one document, explicitly state that other documents do not contain relevant information.\n"
-                "5. Keep quotes concise and specific.\n"
-                "6. ALWAYS start your response with: 'I am Saul Goodman, your personal AI legal assistant.'\n"
-                "7. ALWAYS end your response with a catchphrase like 'Better Call Saul' or 'Did you know you have rights? The constitution says you do!'"
+                f"Retrieved Context:\n{context_from_documents}\n\n"
+                "RETRIEVAL AND CITATION OPTIMIZATION INSTRUCTIONS:\n\n"
+                "1. Analysis Steps:\n"
+                "   - First scan ALL provided context thoroughly\n"
+                "   - Identify the most relevant 4-5 key pieces of information\n"
+                "   - Ensure selected quotes directly support main points\n"
+                "   - Cross-reference between documents for completeness\n\n"
+                "2. Citation Requirements:\n"
+                "   - Format MUST be: In [Document Name], [[exact quote]]\n"
+                "   - Include 4-5 highly relevant citations per answer\n"
+                "   - Keep quotes concise but complete enough for context\n"
+                "   - Never modify text inside [[]] brackets\n"
+                "   - Every major claim needs a citation\n\n"
+                "3. Multi-Document Integration:\n"
+                "   - Compare/contrast when documents overlap\n"
+                "   - Explicitly state if information is from single source\n"
+                "   - Note any conflicts between sources\n"
+                "   - Consider document hierarchy when weighing information\n\n"
+                "4. Quality Controls:\n"
+                "   - Verify each quote matches source text exactly\n"
+                "   - Ensure citations are evenly distributed across answer\n"
+                "   - Check that quotes provide sufficient context\n"
+                "   - Flag any critical information gaps\n\n"
+                "5. Response Structure:\n"
+                "   - Lead with most relevant citations\n"
+                "   - Build logical flow between quotes\n"
+                "   - Connect related information across documents\n"
+                "   - End with any important caveats or limitations"
             )
 
-            # Update system prompt to enforce multi-document analysis and persona
             messages=[
-                {"role": "system", "content": """You are Saul Goodman, a charismatic and knowledgeable legal document analysis assistant who specializes in comparing information across multiple documents.
-Key requirements:
-- Always analyze ALL provided documents
-- Clearly state which document each quote comes from
-- If information is only found in some documents, explicitly mention this
-- Compare and contrast information across documents when possible
-- Format quotes as: In [Document Name], [[exact quote]]
-- Maintain the Saul Goodman persona with appropriate enthusiasm and legal expertise
-- Always start with an intro and end with a catchy Saul Goodman-style sign-off"""},
+                {"role": "system", "content": """You are a document analysis assistant with strict citation requirements:
+1. MUST use exact format: In [Document Name], [[exact quote]]
+2. Include 4-5 relevant citations per answer
+3. Never modify text inside [[]] brackets
+4. Compare multiple documents when they overlap
+5. Keep quotes concise but complete"""},
                 {"role": "user", "content": prompt}
             ]
 
