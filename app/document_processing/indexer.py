@@ -232,12 +232,21 @@ class DocumentIndexer:
     async def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for a list of texts using Voyage"""
         try:
-            response = self.voyage_client.embed(
-                texts=texts,
-                model="voyage-law-2",
-                input_type="document"
-            )
-            return response.embeddings
+            # Process in batches of 128 to stay within Voyage's limit
+            BATCH_SIZE = 128
+            all_embeddings = []
+            
+            for i in range(0, len(texts), BATCH_SIZE):
+                batch = texts[i:i + BATCH_SIZE]
+                response = self.voyage_client.embed(
+                    texts=batch,
+                    model="voyage-law-2",
+                    input_type="document"
+                )
+                all_embeddings.extend(response.embeddings)
+            
+            return all_embeddings
+            
         except Exception as e:
             logger.error(f"Error getting embeddings: {str(e)}")
             raise
