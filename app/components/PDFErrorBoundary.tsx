@@ -1,8 +1,8 @@
-import React, { Component, ErrorInfo } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -28,9 +28,9 @@ export class PDFErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return this.props.fallback || (
-        <div className="p-4 text-red-500">
-          <p>Error loading PDF viewer</p>
-          <p className="text-sm">{this.state.error?.message}</p>
+        <div className="p-4 text-red-500 border bg-red-50 rounded-md">
+          <p className="font-semibold">Error loading PDF viewer</p>
+          <p className="text-sm mt-1">{this.state.error?.message}</p>
         </div>
       );
     }

@@ -144,35 +144,53 @@ export const VirtualizedPDF = forwardRef<PdfFocusHandler, VirtualizedPDFProps>(
             setIsLoading(false);
           }}
           onLoadError={onError}
-          loading={<div>Loading PDF...</div>}
+          loading={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-gray-500 bg-white p-6 rounded-lg shadow-sm">
+                <div className="flex space-x-2 items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+                </div>
+              </div>
+            </div>
+          }
           className="h-full"
         >
           <div 
             ref={containerRef}
-            style={{
-              height: '100vh',
-              overflowY: 'scroll',
-              scrollBehavior: 'smooth',
-              WebkitOverflowScrolling: 'touch',
-              backgroundColor: '#f5f5f5',
-            }}
+            className="h-screen overflow-y-scroll scroll-smooth bg-gray-100"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            <div className="flex flex-col items-center gap-8 py-6">
+            <div className="flex flex-col items-center gap-8 py-8 px-4">
               {!isLoading && Array.from(new Array(pageCount), (_, index) => (
                 <div 
                   ref={el => { pageRefs.current[index] = el; }} 
                   key={`page_${index + 1}_${file.url}`}
-                  className="w-full flex justify-center px-4"
+                  className="w-full flex justify-center"
                 >
-                  <Page
-                    pageNumber={index + 1}
-                    className="border-b border-gray-200 shadow-lg"
-                    width={800}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                    loading={<div className="bg-gray-100 p-4">Loading page {index + 1}...</div>}
-                    error={<div className="bg-red-100 p-4">Error loading page {index + 1}</div>}
-                  />
+                  <div className="relative">
+                    <Page
+                      pageNumber={index + 1}
+                      className="rounded-lg border border-gray-200 shadow-lg bg-white"
+                      width={850}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                      loading={
+                        <div className="bg-white rounded-lg p-6 flex items-center justify-center min-h-[200px]">
+                          <div className="text-gray-500">Loading page {index + 1}...</div>
+                        </div>
+                      }
+                      error={
+                        <div className="bg-red-50 text-red-600 rounded-lg p-6 flex items-center justify-center min-h-[200px]">
+                          Error loading page {index + 1}
+                        </div>
+                      }
+                    />
+                    <div className="absolute bottom-4 right-4 bg-gray-900 text-white text-xs px-2 py-1 rounded-md opacity-50">
+                      {index + 1}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

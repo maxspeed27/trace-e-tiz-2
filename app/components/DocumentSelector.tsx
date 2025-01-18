@@ -1,5 +1,17 @@
-import { useState, useCallback } from 'react';
-import { PdfDocument, createPdfUrl } from '../types/pdf';
+import { useState, useCallback, ChangeEvent } from 'react';
+import { PdfDocument } from '../types/pdf';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface ContractSet {
   id: string;
@@ -59,11 +71,7 @@ export default function DocumentSelector({
       console.log('Response status:', response.status);
       const responseText = await response.text();
       console.log('Raw response text:', responseText);
-      console.log('Response text length:', responseText.length);
-      console.log('First 100 characters:', responseText.substring(0, 100));
-      console.log('Is response text empty?', responseText.trim() === '');
-      
-      // Try to detect if there's any HTML in the response (which would indicate a server error page)
+
       if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html>')) {
         console.error('Received HTML instead of JSON response');
         throw new Error('Server returned HTML instead of JSON. Check server logs.');
@@ -86,19 +94,15 @@ export default function DocumentSelector({
         throw new Error('Server returned invalid JSON');
       }
 
-      // Validate the response structure
       if (!data || typeof data !== 'object') {
         console.error('Invalid response format - expected object, got:', typeof data);
-        console.error('Data:', data);
         throw new Error('Server returned invalid data format');
       }
 
-      console.log('Checking for contract_set_id in:', Object.keys(data));
       if (!data.id) {
         console.error('Response data missing id:', data);
         throw new Error('Server response missing contract set ID');
       }
-
       if (!Array.isArray(data.documents)) {
         console.error('Missing or invalid documents in response:', data);
         throw new Error('Server response missing documents');
@@ -127,9 +131,9 @@ export default function DocumentSelector({
     } finally {
       setIsUploading(false);
     }
-  }, [setSelectedContractSet]);
+  }, [setSelectedContractSet, setContractSets]);
 
-  const handleFolderUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFolderUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       handleFileUpload(files);
@@ -138,9 +142,8 @@ export default function DocumentSelector({
 
   const currentContractSet = contractSets.find(set => set.id === selectedContractSet);
 
-  const handleContractSetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSetId = e.target.value;
-    setSelectedContractSet(newSetId);
+  const handleContractSetChange = (value: string) => {
+    setSelectedContractSet(value);
     setSelectedDocuments([]);
     setActiveDocument(null);
   };
@@ -150,83 +153,108 @@ export default function DocumentSelector({
     let newSelected: string[];
     
     if (isSelected) {
-        newSelected = selectedDocuments.filter(id => id !== docId);
+      newSelected = selectedDocuments.filter(id => id !== docId);
     } else {
-        newSelected = [...selectedDocuments, docId];
+      newSelected = [...selectedDocuments, docId];
     }
     
     setSelectedDocuments(newSelected);
 
     if (currentContractSet) {
-        const doc = currentContractSet.documents.find(d => d.id === docId);
-        if (!activeDocument || newSelected.length === 1 || 
-            (isSelected && activeDocument.id === docId)) {
-            setActiveDocument(doc || null);
-        }
+      const doc = currentContractSet.documents.find(d => d.id === docId);
+      if (
+        !activeDocument || 
+        newSelected.length === 1 || 
+        (isSelected && activeDocument.id === docId)
+      ) {
+        setActiveDocument(doc || null);
+      }
     }
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* Contract Sets Dropdown */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Contract Set
-        </label>
-        <select
-          value={selectedContractSet}
-          onChange={handleContractSetChange}
-          className="w-full p-2 border rounded-md"
-        >
-          <option value="">Select a contract set</option>
-          {contractSets.map(set => (
-            <option key={set.id} value={set.id}>
-              {set.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Document List */}
-      {currentContractSet && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Documents
-          </label>
-          <div className="border rounded-md divide-y">
-            {currentContractSet.documents.map(doc => (
-              <div key={doc.id} className="p-2 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selectedDocuments.includes(doc.id)}
-                  onChange={() => handleDocumentSelect(doc.id)}
-                  className="h-4 w-4 text-blue-600"
-                />
-                <span className="text-sm">{doc.name}</span>
-              </div>
-            ))}
-          </div>
+    <div className="p-2 w-full border-b bg-white">
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <Label className="text-sm font-semibold text-gray-700 mb-1 block">Contract Set</Label>
+          <Select onValueChange={handleContractSetChange} value={selectedContractSet}>
+            <SelectTrigger className="w-full bg-white border-gray-200 hover:bg-gray-50">
+              <SelectValue placeholder="Select a contract set" />
+            </SelectTrigger>
+            <SelectContent>
+              {contractSets.map(set => (
+                <SelectItem key={set.id} value={set.id}>
+                  {set.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      )}
 
-      {/* Upload Section */}
-      <div>
-        <input
-          type="file"
-          multiple
-          accept=".pdf"
-          onChange={handleFolderUpload}
-          className="hidden"
-          id="file-upload"
-        />
-        <label
-          htmlFor="file-upload"
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md cursor-pointer"
-        >
-          {isUploading ? 'Uploading...' : 'Upload Documents'}
-        </label>
-        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+        {currentContractSet && (
+          <div className="flex-1">
+            <Label className="text-sm font-semibold text-gray-700 mb-1 block">Documents</Label>
+            <Select
+              value={selectedDocuments[0] || ''}
+              onValueChange={handleDocumentSelect}
+            >
+              <SelectTrigger className="w-full bg-white border-gray-200 hover:bg-gray-50">
+                <SelectValue placeholder="Select documents">
+                  {selectedDocuments.length === 0 
+                    ? 'Select documents' 
+                    : `${selectedDocuments.length} document${selectedDocuments.length > 1 ? 's' : ''} selected`}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="h-[200px]">
+                  {currentContractSet.documents.map(doc => (
+                    <div 
+                      key={doc.id} 
+                      className="p-2 flex items-center gap-2 hover:bg-gray-50"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDocumentSelect(doc.id);
+                      }}
+                    >
+                      <Checkbox
+                        checked={selectedDocuments.includes(doc.id)}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                      <span className="text-sm text-gray-700 truncate">{doc.name}</span>
+                    </div>
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="flex-none">
+          <Label className="text-sm font-semibold text-gray-700 mb-1 block">Actions</Label>
+          <Input
+            id="file-upload"
+            type="file"
+            multiple
+            accept=".pdf"
+            onChange={handleFolderUpload}
+            className="hidden"
+          />
+          <Button 
+            asChild 
+            variant="default" 
+            className="bg-blue-600 hover:bg-blue-700 text-white w-[120px]"
+          >
+            <label htmlFor="file-upload" className="flex items-center justify-center cursor-pointer h-9">
+              {isUploading ? 'Uploading...' : 'Upload'}
+            </label>
+          </Button>
+        </div>
       </div>
+      {error && (
+        <p className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">
+          {error}
+        </p>
+      )}
     </div>
   );
 } 

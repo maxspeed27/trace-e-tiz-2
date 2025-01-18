@@ -5,7 +5,7 @@ const nextConfig = {
     config.resolve.alias.encoding = false;
     return config;
   },
-  transpilePackages: ['react-pdf'],
+  transpilePackages: ['react-pdf', '@radix-ui/react-select', '@radix-ui/react-label', '@radix-ui/react-scroll-area'],
   async headers() {
     return [
       {
@@ -27,6 +27,7 @@ const nextConfig = {
       },
     ];
   },
+  reactStrictMode: true,
 };
 
 module.exports = nextConfig; 

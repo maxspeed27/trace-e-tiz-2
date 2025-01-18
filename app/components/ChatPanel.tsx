@@ -1,9 +1,12 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePdfFocus } from '../hooks/usePdfFocus';
 import Citation from './Citation';
 import { DocumentColorEnum } from '../constants/colors';
 import { Citation as CitationType } from '../types/citation';
+import { Send, Copy, Minimize, Maximize } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -26,28 +29,35 @@ interface ChatPanelProps {
     url: string;
   }>;
   onCitationClick?: (documentId: string) => void;
+  activeDocument?: {
+    id: string;
+    name: string;
+    url: string;
+  };
 }
 
-export default function ChatPanel({ selectedDocuments, onCitationClick }: ChatPanelProps) {
+export default function ChatPanel({ 
+  selectedDocuments, 
+  onCitationClick,
+  activeDocument 
+}: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [minimizedMessages, setMinimizedMessages] = useState<number[]>([]);
   const { setPdfFocusState } = usePdfFocus();
 
-  useEffect(() => {
-    const ensurePdfWorker = async () => {
-      try {
-        if (typeof window !== 'undefined') {
-          const pdfjs = await import('pdfjs-dist');
-          pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-        }
-      } catch (error) {
-        console.error('Failed to initialize PDF worker:', error);
-      }
-    };
+  const toggleMinimize = (index: number) => {
+    setMinimizedMessages(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
 
-    ensurePdfWorker();
-  }, []);
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+  };
 
   const getDocumentDisplayName = (documentId: string): string => {
     const parts = documentId.split('/');
@@ -63,6 +73,14 @@ export default function ChatPanel({ selectedDocuments, onCitationClick }: ChatPa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !selectedDocuments.length || isLoading) return;
+
+    // Collapse previous answer if it exists
+    if (messages.length > 0) {
+      const lastMessageIndex = messages.length - 1;
+      if (messages[lastMessageIndex].role === 'assistant' && !minimizedMessages.includes(lastMessageIndex)) {
+        setMinimizedMessages(prev => [...prev, lastMessageIndex]);
+      }
+    }
 
     setIsLoading(true);
     const userMessage = input;
@@ -86,7 +104,7 @@ export default function ChatPanel({ selectedDocuments, onCitationClick }: ChatPa
       }
 
       const data = await response.json();
-      
+
       const transformedCitations = data.citations?.map((citation: any, index: number) => ({
         documentId: citation.document_id,
         pageNumber: citation.page_number,
@@ -127,14 +145,14 @@ export default function ChatPanel({ selectedDocuments, onCitationClick }: ChatPa
 
   const renderMessage = (message: Message) => {
     if (message.role === 'user') {
-      return <div className="bg-gray-100 p-3 rounded">{message.content}</div>;
+      return <div className="text-blue-900">{message.content}</div>;
     }
 
     return (
       <div className="space-y-2">
-        <div className="bg-white p-3 rounded border">{message.content}</div>
+        <div className="text-gray-900 leading-relaxed">{message.content}</div>
         {message.citations && message.citations.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-3">
             {message.citations.map((citation, idx) => (
               <Citation 
                 key={idx} 
@@ -150,62 +168,111 @@ export default function ChatPanel({ selectedDocuments, onCitationClick }: ChatPa
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Messages Area */}
-      <div 
-        className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin" 
-        style={{
-          height: 'calc(100vh - 120px)',
-          overflowY: 'auto',
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#E5E7EB transparent'
-        }}
-      >
-        {messages.map((message, idx) => (
-          <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] ${message.role === 'user' ? 'bg-blue-100' : 'bg-gray-100'} rounded-lg p-3`}>
-              {renderMessage(message)}
+    <div className="flex flex-col h-full overflow-hidden bg-gray-50">
+      <ScrollArea className="flex-1 px-1">
+        <div className="space-y-4 max-w-[99%] mx-auto py-2">
+          {messages.map((message, idx) => (
+            <div 
+              key={idx} 
+              className={`${
+                message.role === 'user' ? 
+                  'max-w-[75%] bg-blue-50 ml-auto' : 
+                  'max-w-[98%] bg-white'
+              } p-3 rounded-md shadow-sm`}
+            >
+              {message.role === 'user' ? (
+                <div className="text-blue-900 font-medium">{message.content}</div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className={`text-gray-900 leading-relaxed whitespace-pre-wrap ${
+                      minimizedMessages.includes(idx) ? 'line-clamp-2' : ''
+                    }`}>
+                      {message.content}
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-gray-500 hover:text-gray-700"
+                        onClick={() => copyMessage(message.content)}
+                        title="Copy message"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-gray-500 hover:text-gray-700"
+                        onClick={() => toggleMinimize(idx)}
+                        title={minimizedMessages.includes(idx) ? "Expand" : "Minimize"}
+                      >
+                        {minimizedMessages.includes(idx) ? (
+                          <Maximize className="h-4 w-4" />
+                        ) : (
+                          <Minimize className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  {(!minimizedMessages.includes(idx) && message.citations && message.citations.length > 0) && (
+                    <div className="flex flex-wrap gap-1.5 mt-3 pt-2 border-t">
+                      {message.citations.map((citation, citIdx) => (
+                        <Citation 
+                          key={citIdx} 
+                          {...citation} 
+                          documentName={getDocumentName(citation.documentId)}
+                          onClick={() => handleCitationClick(citation)}
+                          isActive={citation.documentId === activeDocument?.id}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-3 animate-pulse">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-white rounded-md p-3 shadow-sm">
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Input Area */}
-      <form onSubmit={handleSubmit} className="p-4 border-t bg-white flex-shrink-0">
-        <div className="relative">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={selectedDocuments.length ? "Ask a question..." : "Please select documents first"}
-            disabled={!selectedDocuments.length || isLoading}
-            className="w-full p-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || !selectedDocuments.length || isLoading}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 disabled:text-gray-300"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
+          )}
         </div>
-        {!selectedDocuments.length && (
-          <p className="mt-2 text-sm text-gray-500">Select documents to start asking questions</p>
-        )}
-      </form>
+      </ScrollArea>
+
+      <div className="border-t bg-white p-3 shadow-sm">
+        <div className="max-w-[99%] mx-auto">
+          <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+            <Input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={selectedDocuments.length ? "Ask a question..." : "Please select documents first"}
+              disabled={!selectedDocuments.length || isLoading}
+              className="flex-1 bg-white border-gray-200"
+            />
+            <Button 
+              type="submit" 
+              disabled={!input.trim() || !selectedDocuments.length || isLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Send
+            </Button>
+          </form>
+          {!selectedDocuments.length && (
+            <p className="mt-2 text-sm text-gray-500 text-center">
+              Select documents to start asking questions
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 } 

@@ -10,18 +10,21 @@ interface CitationProps {
   displayDate: string;
   color: DocumentColorEnum;
   documentName?: string;
+  isActive?: boolean;
+  onClick?: () => void;
 }
 
-export default function Citation({ 
-  documentId, 
-  pageNumber, 
+export default function Citation({
+  documentId,
+  pageNumber,
   snippet,
   ticker,
   displayDate,
   color,
   documentName,
+  isActive,
   onClick
-}: CitationProps & { onClick?: () => void }) {
+}: CitationProps) {
   const { setPdfFocusState } = usePdfFocus();
 
   const handleClick = () => {
@@ -43,13 +46,27 @@ export default function Citation({
   return (
     <button
       onClick={handleClick}
-      className={`inline-flex items-center gap-1 px-2 py-1 text-sm rounded ${color} hover:opacity-80`}
+      title={documentName}
+      className={`
+        inline-flex items-center gap-1.5 px-3 py-1.5 
+        text-sm font-medium rounded-md 
+        ${isActive 
+          ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' 
+          : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+        }
+        border transition-colors duration-150 
+        shadow-sm
+      `}
     >
-      <span className="max-w-[150px] truncate">{documentName || ticker}</span>
-      <span>•</span>
-      <span>Page {pageNumber}</span>
-      <span>•</span>
-      <span>{displayDate}</span>
+      <span className="max-w-[200px] truncate">{documentName || ticker}</span>
+      <span className="text-gray-400">•</span>
+      <span className="text-gray-600">Page {pageNumber}</span>
+      {displayDate && (
+        <>
+          <span className="text-gray-400">•</span>
+          <span className="text-gray-600">{displayDate}</span>
+        </>
+      )}
     </button>
   );
 } 

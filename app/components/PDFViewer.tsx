@@ -5,10 +5,11 @@ import { PDFErrorBoundary } from './PDFErrorBoundary';
 import { PDFOptionsBar } from '../view/PdfOptionsBar';
 import { Resizable } from 're-resizable';
 import { usePDFViewer } from '../hooks/usePdfViewer';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const VirtualizedPDF = dynamic(() => import('../view/VirtualizedPdf').then(mod => mod.VirtualizedPDF), {
   ssr: false,
-  loading: () => <div className="p-4">Loading PDF viewer...</div>
+  loading: () => <div className="p-4 flex items-center justify-center">Loading PDF viewer...</div>
 });
 
 interface PDFViewerProps {
@@ -37,24 +38,23 @@ export default function PDFViewer({
     pdfFocusRef,
   } = usePDFViewer(file);
 
-  // Add error handling for file URL
   const handleError = (error: Error) => {
     console.error('PDF loading error:', error);
     console.error('File URL:', file.url);
     setLoadError(`Failed to load PDF: ${error.message}`);
   };
 
-  // Reset error state when file changes
   useEffect(() => {
     setLoadError(null);
   }, [file.url]);
 
   if (loadError) {
     return (
-      <div className="flex items-center justify-center h-full p-4 text-red-500">
-        <div className="text-center">
-          <p>{loadError}</p>
-          <p className="text-sm mt-2">URL: {file.url}</p>
+      <div className="flex items-center justify-center h-full p-4">
+        <div className="text-center p-4 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600 font-semibold">Error loading PDF</p>
+          <p className="text-sm text-red-500 mt-2">URL: {file.url}</p>
+          <p className="text-sm text-red-500">{loadError}</p>
         </div>
       </div>
     );
@@ -70,22 +70,22 @@ export default function PDFViewer({
         bottomRight: true,
         right: true,
       }}
-      className={`pdf-viewer-container ${containerClassName}`}
+      className={`pdf-viewer-container ${containerClassName || ''}`}
     >
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col border bg-white">
         <PDFOptionsBar
           file={file}
           selectedDocuments={selectedDocuments}
           currentDocumentIndex={currentDocumentIndex}
           onDocumentChange={onDocumentChange}
         />
-        <div className="flex-1 overflow-auto">
+        <ScrollArea className="flex-1 relative bg-gray-50">
           <PDFErrorBoundary
             fallback={
-              <div className="flex items-center justify-center h-full p-4 text-red-500">
-                <div className="text-center">
-                  <p>Failed to load PDF viewer</p>
-                  <p className="text-sm mt-2">URL: {file.url}</p>
+              <div className="flex items-center justify-center h-full p-4">
+                <div className="text-center p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-600 font-semibold">Failed to load PDF viewer</p>
+                  <p className="text-sm text-red-500 mt-2">URL: {file.url}</p>
                 </div>
               </div>
             }
@@ -101,7 +101,7 @@ export default function PDFViewer({
               onDocumentChange={onDocumentChange}
             />
           </PDFErrorBoundary>
-        </div>
+        </ScrollArea>
       </div>
     </Resizable>
   );

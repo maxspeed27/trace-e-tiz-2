@@ -4,6 +4,7 @@ import ChatPanel from './ChatPanel';
 import DocumentSelector from './DocumentSelector';
 import { PdfFocusProvider } from '../contexts/PdfFocusContext';
 import { PdfDocument } from '../types/pdf';
+import { Resizable } from 're-resizable';
 
 interface ContractSet {
   id: string;
@@ -21,6 +22,7 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [activeDocument, setActiveDocument] = useState<PdfDocument | null>(null);
   const [currentDocumentIndex, setCurrentDocumentIndex] = useState(0);
+  const [leftPanelWidth, setLeftPanelWidth] = useState<string>('40%');
 
   const handleDocumentChange = (newIndex: number) => {
     if (newIndex >= 0 && newIndex < selectedDocuments.length) {
@@ -41,7 +43,8 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
   };
 
   const sanitizeDocumentContent = (content: string): string => {
-    return content.replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+    return content
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
   };
@@ -61,61 +64,53 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
 
   return (
     <PdfFocusProvider>
-      <div style={{ 
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'flex',
-        width: '100vw',
-        height: '100vh',
-        margin: 0,
-        padding: 0,
-        overflow: 'hidden'
-      }}>
+      <div className="flex w-screen h-screen overflow-hidden bg-gray-100">
         {/* Left Panel - Chat */}
-        <div style={{
-          width: '40%',
-          height: '100%',
-          borderRight: '1px solid #E5E7EB',
-          overflow: 'hidden'
-        }}>
-          <ChatPanel 
-            selectedDocuments={selectedDocuments.map(docId => {
-              const doc = contractSets
-                .find(set => set.id === selectedContractSet)
-                ?.documents.find(d => d.id === docId);
-              return {
-                id: docId,
-                name: doc?.name || getDocumentDisplayName(docId),
-                url: doc?.url || ''
-              };
-            })}
-            onCitationClick={handleCitationClick}
-          />
-        </div>
+        <Resizable
+          size={{ width: leftPanelWidth, height: '100%' }}
+          minWidth="25%"
+          maxWidth="75%"
+          enable={{ right: true }}
+          onResizeStop={(e, direction, ref, d) => {
+            const newWidth = ((ref.offsetWidth / window.innerWidth) * 100).toFixed(2) + '%';
+            setLeftPanelWidth(newWidth);
+          }}
+          className="h-full flex flex-col border-r border-gray-200 bg-white shadow-sm"
+          handleStyles={{ right: { width: '4px', right: '-2px' } }}
+          handleClasses={{ right: 'hover:bg-blue-400 transition-colors duration-150' }}
+        >
+          <div className="flex-1 overflow-hidden">
+            <ChatPanel 
+              selectedDocuments={selectedDocuments.map(docId => {
+                const doc = contractSets
+                  .find(set => set.id === selectedContractSet)
+                  ?.documents.find(d => d.id === docId);
+                return {
+                  id: docId,
+                  name: doc?.name || getDocumentDisplayName(docId),
+                  url: doc?.url || ''
+                };
+              })}
+              onCitationClick={handleCitationClick}
+            />
+          </div>
+        </Resizable>
 
         {/* Right Panel - Document Viewer */}
-        <div style={{
-          width: '60%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-          <div style={{ flexShrink: 0 }}>
+        <div className="flex-1 h-full flex flex-col bg-white">
+          <div className="flex-shrink-0">
             <DocumentSelector
               selectedContractSet={selectedContractSet}
               setSelectedContractSet={setSelectedContractSet}
               selectedDocuments={selectedDocuments}
               setSelectedDocuments={setSelectedDocuments}
+              activeDocument={activeDocument}
               setActiveDocument={setActiveDocument}
               contractSets={contractSets}
               setContractSets={setContractSets}
             />
           </div>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div className="flex-1 overflow-hidden bg-gray-50">
             {activeDocument ? (
               <PDFViewer 
                 file={activeDocument}
@@ -125,14 +120,13 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
                 onDocumentChange={handleDocumentChange}
               />
             ) : (
-              <div style={{
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#6B7280'
-              }}>
-                Select a document to view
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center p-8 rounded-lg bg-white shadow-sm border border-gray-200">
+                  <p className="text-lg font-medium text-gray-900">No document selected</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Select a document from above to view its contents
+                  </p>
+                </div>
               </div>
             )}
           </div>

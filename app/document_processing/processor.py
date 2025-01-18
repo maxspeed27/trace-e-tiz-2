@@ -64,8 +64,8 @@ class DocumentProcessor:
             texts = self.text_splitter(text)
             logger.debug(f"Created {len(texts)} chunks")
             
-            # Batch process chunks to avoid memory issues
-            BATCH_SIZE = 10
+            # Batch process chunks to avoid memory issues # changhed from 10 to 20
+            BATCH_SIZE = 20
             for i in range(0, len(texts), BATCH_SIZE):
                 batch = texts[i:i + BATCH_SIZE]
                 for j, chunk_text in enumerate(batch):
