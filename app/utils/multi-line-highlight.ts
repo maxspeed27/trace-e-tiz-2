@@ -5,15 +5,34 @@ export const multiHighlight = (
   pageNumber: number,
   color = DocumentColorEnum.yellow
 ) => {
+  console.log('[multiHighlight] Starting highlight:', {
+    textLength: textToHighlight.length,
+    pageNumber,
+    color
+  });
+
   // Clean up any existing highlights
   const existingHighlights = document.querySelectorAll('.highlight-wrapper');
+  console.log('[multiHighlight] Removing existing highlights:', existingHighlights.length);
   existingHighlights.forEach(el => el.remove());
 
-  const textLayer = document.querySelector(
-    `.react-pdf__Page[data-page-number="${pageNumber + 1}"] .react-pdf__Page__textContent`
-  );
-  
-  if (!textLayer) return false;
+  // Find the specific page's text layer
+  const page = document.querySelector(`.react-pdf__Page[data-page-number="${pageNumber + 1}"]`);
+  if (!page) {
+    console.error('[multiHighlight] Page not found:', pageNumber + 1);
+    return false;
+  }
+
+  const textLayer = page.querySelector('.react-pdf__Page__textContent');
+  if (!textLayer) {
+    console.error('[multiHighlight] Text layer not found for page:', pageNumber + 1);
+    return false;
+  }
+
+  console.log('[multiHighlight] Found text layer:', {
+    pageNumber: pageNumber + 1,
+    childCount: textLayer.children.length
+  });
 
   const spans = Array.from(textLayer.children) as HTMLElement[];
   
@@ -29,26 +48,36 @@ export const multiHighlight = (
     .split(' ')
     .filter(word => word.length > 2); // Only look for words longer than 2 chars
 
-  console.log('Search words:', searchWords);
+  console.log('[multiHighlight] Search words:', {
+    original: textToHighlight,
+    normalized: searchWords,
+    count: searchWords.length
+  });
 
-  if (searchWords.length === 0) return false;
+  if (searchWords.length === 0) {
+    console.warn('[multiHighlight] No valid search words found');
+    return false;
+  }
 
   // Find all spans containing any search words
   const matchingSpanIndices: number[] = [];
+  const matchDetails: {index: number, words: string[]}[] = [];
   
   spans.forEach((span, index) => {
     const spanText = normalizeText(span.textContent || '');
-    console.log(`Span ${index}:`, spanText);
     
     // Check if this span contains any of our search words
     const matchedWords = searchWords.filter(word => spanText.includes(word));
     if (matchedWords.length > 0) {
-      console.log(`Found words in span ${index}:`, matchedWords);
       matchingSpanIndices.push(index);
+      matchDetails.push({index, words: matchedWords});
     }
   });
 
-  console.log('Matching span indices:', matchingSpanIndices);
+  console.log('[multiHighlight] Matching spans:', {
+    count: matchingSpanIndices.length,
+    details: matchDetails
+  });
 
   // Group nearby spans together
   const spanGroups: number[][] = [];
@@ -72,25 +101,42 @@ export const multiHighlight = (
     spanGroups.push(currentGroup);
   }
 
-  console.log('Span groups:', spanGroups);
+  console.log('[multiHighlight] Span groups:', {
+    count: spanGroups.length,
+    groups: spanGroups.map(group => ({
+      size: group.length,
+      indices: group
+    }))
+  });
 
   // Find the group with the most search words
   let bestGroup: number[] = [];
   let bestMatchCount = 0;
+  let bestMatchDetails = null;
 
   spanGroups.forEach(group => {
     const groupText = group
       .map(index => normalizeText(spans[index].textContent || ''))
       .join(' ');
     
-    const matchCount = searchWords.filter(word => groupText.includes(word)).length;
+    const matchedWords = searchWords.filter(word => groupText.includes(word));
+    const matchCount = matchedWords.length;
+    
     if (matchCount > bestMatchCount) {
       bestMatchCount = matchCount;
       bestGroup = group;
+      bestMatchDetails = {
+        text: groupText,
+        matchedWords
+      };
     }
   });
 
-  console.log('Best group:', bestGroup, 'with', bestMatchCount, 'matches');
+  console.log('[multiHighlight] Best group:', {
+    size: bestGroup.length,
+    matchCount: bestMatchCount,
+    details: bestMatchDetails
+  });
 
   // Highlight the best group if it matches enough words
   if (bestMatchCount >= Math.min(2, searchWords.length)) {
@@ -110,8 +156,10 @@ export const multiHighlight = (
       `;
       textLayer.appendChild(highlight);
     });
+    console.log('[multiHighlight] Successfully added highlights');
     return true;
   }
 
+  console.warn('[multiHighlight] Not enough matches to highlight');
   return false;
 }; 
