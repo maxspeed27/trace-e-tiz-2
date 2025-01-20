@@ -28,7 +28,7 @@
       },
   
       "pythonGuidelines": {
-        "objective": "Maintain clean PDF ingestion, chunking, Qdrant indexing, and a stable Q&A route that returns JSON with text + citations. Use cohere or openai embeddings.",
+        "objective": "Maintain clean PDF ingestion, chunking, Qdrant indexing, and a stable Q&A route that returns JSON with text + citations. Use voyageai embeddings.",
         "rules": [
           {
             "id": "PY-1",
