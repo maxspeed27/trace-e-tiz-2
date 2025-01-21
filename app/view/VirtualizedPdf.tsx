@@ -69,10 +69,11 @@ export const VirtualizedPDF = forwardRef<PdfFocusHandler, VirtualizedPDFProps>(
           return;
         }
 
+        // Initial scroll to make sure the page is in view, but don't center it yet
         const pageTop = pageRef.offsetTop;
         container.scrollTo({
-          top: pageTop - 20,
-          behavior: 'smooth'
+          top: pageTop,
+          behavior: 'instant' // Use instant to avoid conflicting with highlight scroll
         });
         
         // Give PDF.js time to render the text layer
@@ -108,7 +109,28 @@ export const VirtualizedPDF = forwardRef<PdfFocusHandler, VirtualizedPDFProps>(
               
               console.log('Highlight attempt result:', success);
               
-              if (!success && attempts < 10) {
+              if (success) {
+                // Find the highlight element and scroll to center it
+                const highlight = document.querySelector('.highlight-wrapper');
+                if (highlight) {
+                  const highlightRect = highlight.getBoundingClientRect();
+                  const containerRect = container.getBoundingClientRect();
+                  const pageRect = pageRef.getBoundingClientRect();
+                  
+                  // Calculate the absolute position of the highlight within the page
+                  const highlightOffsetTop = highlightRect.top - pageRect.top;
+                  
+                  // Calculate the ideal scroll position to place highlight in top quarter
+                  // Use 0.25 to position at ~25% from the top of the viewport
+                  const idealScrollTop = pageTop + highlightOffsetTop - (containerRect.height * 0.25);
+                  
+                  // Smooth scroll to the adjusted position
+                  container.scrollTo({
+                    top: idealScrollTop,
+                    behavior: 'smooth'
+                  });
+                }
+              } else if (attempts < 10) {
                 setTimeout(() => attemptHighlight(attempts + 1), 100);
               }
             }, 100);

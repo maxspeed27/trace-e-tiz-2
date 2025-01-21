@@ -98,15 +98,22 @@ export const multiHighlight = (
       const span = spans[index];
       const highlight = document.createElement('div');
       highlight.className = `highlight-wrapper ${highlightColors[color]}`;
+      
+      // Get the actual text width by measuring it
+      const textWidth = span.getBoundingClientRect().width;
+      
       highlight.style.cssText = `
         position: absolute;
         left: ${span.offsetLeft}px;
         top: ${span.offsetTop}px;
-        width: ${span.offsetWidth}px;
+        width: ${textWidth}px;
         height: ${span.offsetHeight}px;
-        background-color: ${color === DocumentColorEnum.yellow ? 'rgba(253, 230, 138, 0.8)' : 'rgba(191, 219, 254, 0.8)'};
+        background-color: ${color === DocumentColorEnum.yellow ? 'rgba(253, 230, 138, 0.4)' : 'rgba(191, 219, 254, 0.4)'};
         pointer-events: none;
         z-index: 2;
+        mix-blend-mode: multiply;
+        border-radius: 2px;
+        margin-right: -2px; /* Slight negative margin to prevent gaps between highlights */
       `;
       textLayer.appendChild(highlight);
     });
