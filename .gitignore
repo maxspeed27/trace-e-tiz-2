@@ -111,3 +111,7 @@ system_prompt_examples
 system_prompt_examples_1.md
 public 
 prompts
+data/
+updated_backend.md
+updated_frontend.md
+updated_full_codebase.md
