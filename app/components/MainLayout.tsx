@@ -24,40 +24,81 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
   const [activeDocument, setActiveDocument] = useState<PdfDocument | null>(null);
   const [currentDocumentIndex, setCurrentDocumentIndex] = useState(0);
   const [leftPanelWidth, setLeftPanelWidth] = useState<string>('40%');
-  const [preloadedDocs, setPreloadedDocs] = useState<Map<string, Blob>>(new Map());
+  const [preloadedDocs, setPreloadedDocs] = useState<Map<string, string>>(new Map());
+  const [preloadQueue, setPreloadQueue] = useState<string[]>([]);
+  const [isPreloading, setIsPreloading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      preloadedDocs.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPreloading && preloadQueue.length > 0) {
+      const preloadNext = async () => {
+        setIsPreloading(true);
+        const docId = preloadQueue[0];
+        
+        const currentSet = contractSets.find(set => set.id === selectedContractSet);
+        const doc = currentSet?.documents.find(d => d.id === docId);
+        
+        if (doc && !preloadedDocs.has(doc.id)) {
+          try {
+            const response = await fetch(doc.url);
+            if (response.ok) {
+              const blob = await response.blob();
+              const blobUrl = URL.createObjectURL(blob);
+              setPreloadedDocs(prev => {
+                const oldUrl = prev.get(doc.id);
+                if (oldUrl?.startsWith('blob:')) {
+                  URL.revokeObjectURL(oldUrl);
+                }
+                return new Map(prev).set(doc.id, blobUrl);
+              });
+            }
+          } catch (error) {
+            console.warn('Failed to preload document:', doc.id, error);
+          }
+        }
+        
+        setPreloadQueue(prev => prev.slice(1));
+        setIsPreloading(false);
+      };
+      
+      preloadNext();
+    }
+  }, [isPreloading, preloadQueue, selectedContractSet, contractSets, preloadedDocs]);
 
   useEffect(() => {
     const currentSet = contractSets.find(set => set.id === selectedContractSet);
     if (!currentSet) return;
     
-    const preloadDocuments = async () => {
-      if (!canPreloadDocuments(currentSet.documents.length)) return;
-      
-      for (const doc of currentSet.documents) {
-        if (preloadedDocs.has(doc.id)) continue;
-        
-        try {
-          const response = await fetch(doc.url);
-          if (!response.ok) continue;
-          
-          const blob = await response.blob();
-          setPreloadedDocs(prev => new Map(prev).set(doc.id, blob));
-        } catch (error) {
-          console.warn('Failed to preload document:', doc.id, error);
-        }
-      }
-    };
+    if (!canPreloadDocuments(currentSet.documents.length)) return;
     
-    preloadDocuments();
-  }, [selectedContractSet, contractSets, preloadedDocs]);
+    const docsToPreload = currentSet.documents
+      .filter(doc => !preloadedDocs.has(doc.id))
+      .map(doc => doc.id);
+    
+    const prioritizedDocs = [
+      ...selectedDocuments.filter(id => docsToPreload.includes(id)),
+      ...docsToPreload.filter(id => !selectedDocuments.includes(id))
+    ];
+    
+    setPreloadQueue(prioritizedDocs);
+  }, [selectedContractSet, contractSets, selectedDocuments]);
 
   const getDocumentUrl = (docId: string): string => {
-    const blob = preloadedDocs.get(docId);
-    if (blob) {
-      return URL.createObjectURL(blob);
-    }
-    const currentSet = contractSets.find(set => set.id === selectedContractSet);
-    const doc = currentSet?.documents.find(d => d.id === docId);
+    const preloadedUrl = preloadedDocs.get(docId);
+    if (preloadedUrl) return preloadedUrl;
+
+    const doc = contractSets
+      .find(set => set.id === selectedContractSet)
+      ?.documents.find(d => d.id === docId);
     return doc?.url || '';
   };
 
@@ -71,8 +112,8 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
       if (newDoc) {
         const sanitizedDoc = {
           ...newDoc,
-          content: newDoc.content ? sanitizeDocumentContent(newDoc.content) : '',
-          url: getDocumentUrl(newDocId)
+          url: getDocumentUrl(newDoc.id),
+          content: newDoc.content ? sanitizeDocumentContent(newDoc.content) : ''
         };
         setCurrentDocumentIndex(newIndex);
         setActiveDocument(sanitizedDoc);
@@ -98,6 +139,19 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
     const parts = documentId.split('/');
     const filename = parts[parts.length - 1];
     return decodeURIComponent(filename.replace(/\.[^/.]+$/, ""));
+  };
+
+  const handleDocumentSelect = (doc: PdfDocument | null) => {
+    if (!doc) {
+      setActiveDocument(null);
+      return;
+    }
+
+    const docWithUrl = {
+      ...doc,
+      url: getDocumentUrl(doc.id)
+    };
+    setActiveDocument(docWithUrl);
   };
 
   return (
@@ -130,11 +184,7 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
                 };
               })}
               onCitationClick={handleCitationClick}
-              activeDocument={activeDocument ? {
-                id: activeDocument.id,
-                name: activeDocument.name,
-                url: getDocumentUrl(activeDocument.id)
-              } : undefined}
+              activeDocument={activeDocument || undefined}
             />
           </div>
         </Resizable>
@@ -148,16 +198,7 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
               selectedDocuments={selectedDocuments}
               setSelectedDocuments={setSelectedDocuments}
               activeDocument={activeDocument}
-              setActiveDocument={(doc: PdfDocument | null) => {
-                if (doc) {
-                  setActiveDocument({
-                    ...doc,
-                    url: getDocumentUrl(doc.id)
-                  });
-                } else {
-                  setActiveDocument(null);
-                }
-              }}
+              setActiveDocument={handleDocumentSelect}
               contractSets={contractSets}
               setContractSets={setContractSets}
             />

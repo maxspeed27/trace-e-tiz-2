@@ -1,14 +1,6 @@
 import React, { createContext, useState } from 'react';
 import { DocumentColorEnum } from '../constants/colors';
-
-interface Citation {
-  documentId: string;
-  snippet: string;
-  pageNumber: number;
-  ticker: string;
-  displayDate: string;
-  color: DocumentColorEnum;
-}
+import { Citation } from '../types/citation';
 
 interface PdfFocusState {
   documentId: string;

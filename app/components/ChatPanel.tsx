@@ -21,6 +21,7 @@ interface Message {
     displayDate: string;
     color: DocumentColorEnum;
     documentName?: string;
+    url: string;
   }[];
 }
 
@@ -125,15 +126,25 @@ export default function ChatPanel({
 
       const data = await response.json();
 
-      const transformedCitations = data.citations?.map((citation: any, index: number) => ({
-        documentId: citation.document_id,
-        pageNumber: citation.page_number,
-        snippet: citation.text_snippet,
-        ticker: `[${index + 1}]`,
-        displayDate: '',
-        color: DocumentColorEnum.yellow,
-        documentName: citation.document_name || getDocumentName(citation.document_id)
-      }));
+      const transformedCitations = data.citations?.map((citation: any, index: number) => {
+        // Find the matching document to get its URL
+        const sourceDoc = selectedDocuments.find(doc => doc.id === citation.document_id);
+        if (!sourceDoc) {
+          console.warn('Citation references unknown document:', citation.document_id);
+          return null;
+        }
+
+        return {
+          documentId: citation.document_id,
+          pageNumber: citation.page_number,
+          snippet: citation.text_snippet,
+          ticker: `[${index + 1}]`,
+          displayDate: '',
+          color: DocumentColorEnum.yellow,
+          documentName: citation.document_name || getDocumentName(citation.document_id),
+          url: sourceDoc.url // Include the URL from selectedDocuments
+        };
+      }).filter(Boolean); // Remove any null citations
 
       setMessages(prev => [...prev, {
         role: 'assistant',

@@ -8,4 +8,5 @@ export interface Citation {
   displayDate: string;
   color: DocumentColorEnum;
   documentName?: string;
+  url: string;
 } 

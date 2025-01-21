@@ -10,6 +10,7 @@ interface CitationProps {
   displayDate: string;
   color: DocumentColorEnum;
   documentName?: string;
+  url: string;
   isActive?: boolean;
   onClick?: () => void;
 }
@@ -22,6 +23,7 @@ export default function Citation({
   displayDate,
   color,
   documentName,
+  url,
   isActive,
   onClick
 }: CitationProps) {
@@ -37,7 +39,8 @@ export default function Citation({
         snippet,
         ticker,
         displayDate,
-        color
+        color,
+        url
       }
     });
     onClick?.();
