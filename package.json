@@ -19,6 +19,7 @@
     "@types/uuid": "^10.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.473.0",
     "next": "14.1.0",
     "pdfjs-dist": "^3.11.174",
@@ -32,6 +33,7 @@
     "uuid": "^11.0.3"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.14",
     "@types/node": "^18.0.0",
     "@types/react": "^18.0.0",
     "autoprefixer": "^10.4.20",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { usePdfFocus } from '../hooks/usePdfFocus';
 import Citation from './Citation';
 import { DocumentColorEnum } from '../constants/colors';
@@ -7,6 +7,8 @@ import { Send, Copy, Minimize, Maximize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import debounce from 'lodash/debounce';
+import { PdfDocument } from '../types/pdf';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -23,12 +25,8 @@ interface Message {
 }
 
 interface ChatPanelProps {
-  selectedDocuments: Array<{
-    id: string;
-    name: string;
-    url: string;
-  }>;
-  onCitationClick?: (documentId: string) => void;
+  selectedDocuments: PdfDocument[];
+  onCitationClick: (documentId: string) => void;
   activeDocument?: {
     id: string;
     name: string;
@@ -42,10 +40,12 @@ export default function ChatPanel({
   activeDocument 
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [displayValue, setDisplayValue] = useState('');
+  const [submissionValue, setSubmissionValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [minimizedMessages, setMinimizedMessages] = useState<number[]>([]);
   const { setPdfFocusState } = usePdfFocus();
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const toggleMinimize = (index: number) => {
     setMinimizedMessages(prev => 
@@ -70,9 +70,28 @@ export default function ChatPanel({
     return doc?.name || getDocumentDisplayName(documentId);
   };
 
+  const debouncedSetSubmission = useCallback(
+    debounce((value: string) => {
+      setSubmissionValue(value);
+    }, 150),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedSetSubmission.cancel();
+    };
+  }, [debouncedSetSubmission]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDisplayValue(value);
+    debouncedSetSubmission(value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !selectedDocuments.length || isLoading) return;
+    if (!submissionValue.trim() || !selectedDocuments.length || isLoading) return;
 
     // Collapse previous answer if it exists
     if (messages.length > 0) {
@@ -83,8 +102,9 @@ export default function ChatPanel({
     }
 
     setIsLoading(true);
-    const userMessage = input;
-    setInput('');
+    const userMessage = submissionValue;
+    setDisplayValue('');
+    setSubmissionValue('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
     try {
@@ -128,6 +148,13 @@ export default function ChatPanel({
       }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
@@ -251,15 +278,15 @@ export default function ChatPanel({
           <form onSubmit={handleSubmit} className="flex items-center space-x-2">
             <Input
               type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
+              value={displayValue}
+              onChange={handleInputChange}
               placeholder={selectedDocuments.length ? "Ask a question..." : "Please select documents first"}
               disabled={!selectedDocuments.length || isLoading}
               className="flex-1 bg-white border-gray-200"
             />
             <Button 
               type="submit" 
-              disabled={!input.trim() || !selectedDocuments.length || isLoading}
+              disabled={!submissionValue.trim() || !selectedDocuments.length || isLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4"
             >
               <Send className="w-4 h-4 mr-2" />
