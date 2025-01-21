@@ -1,11 +1,10 @@
-import { useState, useCallback, ChangeEvent, useEffect } from 'react';
+import { useState, useCallback, ChangeEvent } from 'react';
 import { PdfDocument } from '../types/pdf';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { canPreloadDocuments } from '../utils/memory';
 import {
   Select,
   SelectContent,
@@ -43,7 +42,6 @@ export default function DocumentSelector({
 }: DocumentSelectorProps) {
   const [error, setError] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
-  const [preloadedDocs, setPreloadedDocs] = useState<Map<string, Blob>>(new Map());
 
   const handleFileUpload = useCallback(async (files: FileList) => {
     setIsUploading(true);
@@ -150,39 +148,6 @@ export default function DocumentSelector({
     setActiveDocument(null);
   };
 
-  useEffect(() => {
-    if (!currentContractSet) return;
-    
-    const preloadDocuments = async () => {
-      if (!canPreloadDocuments(currentContractSet.documents.length)) return;
-      
-      for (const doc of currentContractSet.documents) {
-        if (preloadedDocs.has(doc.id)) continue;
-        
-        try {
-          const response = await fetch(doc.url);
-          if (!response.ok) continue;
-          
-          const blob = await response.blob();
-          setPreloadedDocs(prev => new Map(prev).set(doc.id, blob));
-        } catch (error) {
-          console.warn('Failed to preload document:', doc.id, error);
-        }
-      }
-    };
-    
-    preloadDocuments();
-  }, [currentContractSet, preloadedDocs]);
-
-  const getDocumentUrl = (docId: string): string => {
-    const blob = preloadedDocs.get(docId);
-    if (blob) {
-      return URL.createObjectURL(blob);
-    }
-    const doc = currentContractSet?.documents.find(d => d.id === docId);
-    return doc?.url || '';
-  };
-
   const handleDocumentSelect = (docId: string) => {
     const isSelected = selectedDocuments.includes(docId);
     let newSelected: string[];
@@ -198,10 +163,7 @@ export default function DocumentSelector({
     if (currentContractSet) {
       const doc = currentContractSet.documents.find(d => d.id === docId);
       if (doc && (!activeDocument || newSelected.length === 1 || (isSelected && activeDocument.id === docId))) {
-        setActiveDocument({
-          ...doc,
-          url: getDocumentUrl(docId)
-        });
+        setActiveDocument(doc);
       }
     }
   };

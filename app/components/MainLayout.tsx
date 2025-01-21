@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PDFViewer from './PDFViewer';
 import ChatPanel from './ChatPanel';
 import DocumentSelector from './DocumentSelector';
 import { PdfFocusProvider } from '../contexts/PdfFocusContext';
 import { PdfDocument } from '../types/pdf';
 import { Resizable } from 're-resizable';
+import { canPreloadDocuments } from '../utils/memory';
 
 interface ContractSet {
   id: string;
@@ -23,6 +24,42 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
   const [activeDocument, setActiveDocument] = useState<PdfDocument | null>(null);
   const [currentDocumentIndex, setCurrentDocumentIndex] = useState(0);
   const [leftPanelWidth, setLeftPanelWidth] = useState<string>('40%');
+  const [preloadedDocs, setPreloadedDocs] = useState<Map<string, Blob>>(new Map());
+
+  useEffect(() => {
+    const currentSet = contractSets.find(set => set.id === selectedContractSet);
+    if (!currentSet) return;
+    
+    const preloadDocuments = async () => {
+      if (!canPreloadDocuments(currentSet.documents.length)) return;
+      
+      for (const doc of currentSet.documents) {
+        if (preloadedDocs.has(doc.id)) continue;
+        
+        try {
+          const response = await fetch(doc.url);
+          if (!response.ok) continue;
+          
+          const blob = await response.blob();
+          setPreloadedDocs(prev => new Map(prev).set(doc.id, blob));
+        } catch (error) {
+          console.warn('Failed to preload document:', doc.id, error);
+        }
+      }
+    };
+    
+    preloadDocuments();
+  }, [selectedContractSet, contractSets, preloadedDocs]);
+
+  const getDocumentUrl = (docId: string): string => {
+    const blob = preloadedDocs.get(docId);
+    if (blob) {
+      return URL.createObjectURL(blob);
+    }
+    const currentSet = contractSets.find(set => set.id === selectedContractSet);
+    const doc = currentSet?.documents.find(d => d.id === docId);
+    return doc?.url || '';
+  };
 
   const handleDocumentChange = (newIndex: number) => {
     if (newIndex >= 0 && newIndex < selectedDocuments.length) {
@@ -34,7 +71,8 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
       if (newDoc) {
         const sanitizedDoc = {
           ...newDoc,
-          content: newDoc.content ? sanitizeDocumentContent(newDoc.content) : ''
+          content: newDoc.content ? sanitizeDocumentContent(newDoc.content) : '',
+          url: getDocumentUrl(newDocId)
         };
         setCurrentDocumentIndex(newIndex);
         setActiveDocument(sanitizedDoc);
@@ -88,10 +126,15 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
                 return {
                   id: docId,
                   name: doc?.name || getDocumentDisplayName(docId),
-                  url: doc?.url || ''
+                  url: getDocumentUrl(docId)
                 };
               })}
               onCitationClick={handleCitationClick}
+              activeDocument={activeDocument ? {
+                id: activeDocument.id,
+                name: activeDocument.name,
+                url: getDocumentUrl(activeDocument.id)
+              } : undefined}
             />
           </div>
         </Resizable>
@@ -105,7 +148,16 @@ export default function MainLayout({ contractSets: initialSets }: MainLayoutProp
               selectedDocuments={selectedDocuments}
               setSelectedDocuments={setSelectedDocuments}
               activeDocument={activeDocument}
-              setActiveDocument={setActiveDocument}
+              setActiveDocument={(doc: PdfDocument | null) => {
+                if (doc) {
+                  setActiveDocument({
+                    ...doc,
+                    url: getDocumentUrl(doc.id)
+                  });
+                } else {
+                  setActiveDocument(null);
+                }
+              }}
               contractSets={contractSets}
               setContractSets={setContractSets}
             />
