@@ -6,8 +6,13 @@ import { PDFOptionsBar } from '../view/PdfOptionsBar';
 import { Resizable } from 're-resizable';
 import { usePDFViewer } from '../hooks/usePdfViewer';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { forwardRef } from 'react';
 
-const VirtualizedPDF = dynamic(() => import('../view/VirtualizedPdf').then(mod => mod.VirtualizedPDF), {
+const VirtualizedPDF = dynamic(() => 
+  import('../view/VirtualizedPdf').then(mod => {
+    const Component = mod.VirtualizedPDF;
+    return forwardRef((props: any, ref: any) => <Component {...props} ref={ref} />);
+  }), {
   ssr: false,
   loading: () => <div className="p-4 flex items-center justify-center">Loading PDF viewer...</div>
 });

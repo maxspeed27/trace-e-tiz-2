@@ -302,7 +302,7 @@ Every response MUST have at least 4 and no more than 10 citations."""},
                 model="gpt-4o",
                 messages=messages,
                 temperature=0.1,  # Slightly increased from 0.0 to encourage more comprehensive responses
-                max_tokens=1500  # Increased to allow for longer, more detailed responses
+                max_tokens=2000  # Increased to allow for longer, more detailed responses
             )
             
             answer = response.choices[0].message.content

@@ -35,6 +35,9 @@ load_dotenv()  # Add this before initializing any clients
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Add this near the top with other constants
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'contract_sets')
+
 app = FastAPI(root_path="/api")
 app.qdrant_client = QdrantClient(
     url=os.getenv("QDRANT_CLOUD_URL"),
@@ -185,44 +188,39 @@ async def query_documents(request: QueryRequest):
 
 @app.get("/contract-sets")
 async def get_contract_sets():
+    """Scans data/contract_sets folder and returns all PDFs grouped by folder"""
     try:
-        # Query Qdrant for all unique contract sets
-        response = app.qdrant_client.scroll(
-            collection_name="documents",
-            scroll_filter=None,
-            limit=100,
-            with_payload=True
-        )
+        contract_sets = []
         
-        # Group by contract_set_id
-        contract_sets = {}
-        for point in response[0]:
-            if not point.payload:
+        # Scan each folder in data/contract_sets
+        for folder in os.listdir(DATA_DIR):
+            folder_path = os.path.join(DATA_DIR, folder)
+            if not os.path.isdir(folder_path):
                 continue
                 
-            set_id = point.payload.get('metadata', {}).get('contract_set_id')
-            doc_id = point.payload.get('metadata', {}).get('document_id')
-            doc_name = point.payload.get('metadata', {}).get('name', 'Unnamed Document')
-            
-            if set_id not in contract_sets:
-                contract_sets[set_id] = {
-                    "id": set_id,
-                    "name": f"Contract Set {set_id[:8]}",  # You might want to store/retrieve actual names
-                    "documents": []
-                }
-            
-            # Add document if not already added
-            if not any(d['id'] == doc_id for d in contract_sets[set_id]['documents']):
-                contract_sets[set_id]['documents'].append({
+            # Find all PDFs in this folder
+            documents = []
+            for pdf in os.listdir(folder_path):
+                if not pdf.endswith('.pdf'):
+                    continue
+                    
+                doc_id = f"{folder}_{pdf}".replace('.pdf', '').lower()
+                documents.append({
                     "id": doc_id,
-                    "name": doc_name,
-                    "url": f"/api/documents/{doc_id}"
+                    "name": pdf,
+                    "url": f"/api/documents/{doc_id}/content"
+                })
+            
+            if documents:
+                contract_sets.append({
+                    "id": folder.lower(),
+                    "name": folder.upper(),
+                    "documents": documents
                 })
         
-        return list(contract_sets.values())
-        
+        return contract_sets
     except Exception as e:
-        logger.error(f"Error fetching contract sets: {str(e)}")
+        logger.error(f"Error scanning contract sets: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/documents/{contract_set_id}")
@@ -434,6 +432,31 @@ async def get_documents():
     except Exception as e:
         logger.error(f"Error getting documents: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 
+
+@app.get("/documents/{document_id}/content")
+async def get_document_content(document_id: str):
+    """Serve a PDF file from the data folder"""
+    try:
+        # Find which folder contains this document
+        for folder in os.listdir(DATA_DIR):
+            folder_path = os.path.join(DATA_DIR, folder)
+            if not os.path.isdir(folder_path):
+                continue
+                
+            # Check if this document_id matches any PDF in this folder
+            for pdf in os.listdir(folder_path):
+                if not pdf.endswith('.pdf'):
+                    continue
+                    
+                test_id = f"{folder}_{pdf}".replace('.pdf', '').lower()
+                if test_id == document_id:
+                    pdf_path = os.path.join(folder_path, pdf)
+                    return FileResponse(pdf_path, media_type='application/pdf')
+        
+        raise HTTPException(status_code=404, detail="Document not found")
+    except Exception as e:
+        logger.error(f"Error serving document {document_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Export for other modules to use
 __all__ = ['app', 'query_engine'] 
