@@ -115,3 +115,5 @@ data/
 updated_backend.md
 updated_frontend.md
 updated_full_codebase.md
+@prompts/ 
+anthropicDocs/
